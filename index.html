@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>aiuser – all images by user</title>
+    <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/jquery/3.4.1/jquery.js"></script>
+    <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.js"></script>
+    <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/datatables/1.10.19/js/jquery.dataTables.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://tools-static.wmflabs.org/cdnjs/ajax/libs/datatables/1.10.19/css/jquery.dataTables.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <table id="data">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Upload</th>
+            <th>Original</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <script>
+      const table = jQuery('#data').DataTable({paging: false});
+
+      aiuser();
+      function aiuser(options) {
+        const url =
+          'https://commons.wikimedia.org/w/api.php?' +
+          $.param(
+            $.extend(
+              {
+                action: 'query',
+                format: 'json',
+                origin: '*',
+                list: 'allimages',
+                aiuser: 'simon04',
+                aisort: 'timestamp',
+                aiprop: 'timestamp|url|metadata',
+                ailimit: 500
+              },
+              options || {}
+            )
+          );
+        return fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            // console.table(data.query.allimages);
+            data.query.allimages.map(image => {
+              const date = image.metadata.find(m => m.name === 'DateTimeOriginal');
+              table.row.add([image.name, image.timestamp, date ? date.value : '']);
+            });
+            table.draw();
+            if (data.continue) {
+              return aiuser(data.continue);
+            }
+          });
+      }
+    </script>
+  </body>
+</html>
