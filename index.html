@@ -19,6 +19,8 @@
             <th>File</th>
             <th>Upload date</th>
             <th>Original date</th>
+            <th>Artist</th>
+            <th>License</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -31,17 +33,12 @@
           {
             data: null,
             render: (data, type, row, meta) =>
-              `<a href="${data.descriptionurl}" target="_blank">${data.title}</a>`
+              `<a href="${data.imageinfo[0].descriptionurl}" target="_blank">${data.title}</a>`
           },
-          {
-            data: null,
-            render: 'timestamp'
-          },
-          {
-            data: null,
-            render: (data, type, row, meta) =>
-              data.DateTimeOriginal ? data.DateTimeOriginal.value : ''
-          }
+          {data: null, render: 'metadata.DateTime.value'},
+          {data: null, render: 'metadata.DateTimeOriginal.value'},
+          {data: null, render: 'metadata.Artist.value'},
+          {data: null, render: 'metadata.LicenseShortName.value'}
         ]
       });
       let user = getUserFromLocation();
@@ -72,11 +69,14 @@
                 action: 'query',
                 format: 'json',
                 origin: '*',
-                list: 'allimages',
-                aiuser: user,
-                aisort: 'timestamp',
-                aiprop: 'timestamp|url|metadata',
-                ailimit: 500
+                generator: 'allimages',
+                gaiuser: user,
+                gaisort: 'timestamp',
+                gaiprop: 'timestamp|url',
+                gailimit: 500,
+                prop: 'imageinfo',
+                iiprop: 'url|extmetadata',
+                iiextmetadatafilter: 'DateTime|DateTimeOriginal|Categories|Artist|LicenseShortName'
               },
               options || {}
             )
@@ -84,9 +84,8 @@
         return fetch(url)
           .then(response => response.json())
           .then(data => {
-            // console.table(data.query.allimages);
-            data.query.allimages.map(image => {
-              image.DateTimeOriginal = image.metadata.find(m => m.name === 'DateTimeOriginal');
+            Object.values(data.query.pages).map(image => {
+              image.metadata = image.imageinfo[0].extmetadata;
               table.row.add(image);
             });
             table.draw();
