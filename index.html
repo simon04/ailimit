@@ -17,15 +17,33 @@
         <thead>
           <tr>
             <th>File</th>
-            <th>Upload</th>
-            <th>Original</th>
+            <th>Upload date</th>
+            <th>Original date</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
     <script>
-      const table = jQuery('#data').DataTable({paging: false});
+      const table = jQuery('#data').DataTable({
+        paging: false,
+        columns: [
+          {
+            data: null,
+            render: (data, type, row, meta) =>
+              `<a href="${data.descriptionurl}" target="_blank">${data.title}</a>`
+          },
+          {
+            data: null,
+            render: 'timestamp'
+          },
+          {
+            data: null,
+            render: (data, type, row, meta) =>
+              data.DateTimeOriginal ? data.DateTimeOriginal.value : ''
+          }
+        ]
+      });
       let user = getUserFromLocation();
       if (!user) {
         user = getUserViaPrompt();
@@ -68,8 +86,8 @@
           .then(data => {
             // console.table(data.query.allimages);
             data.query.allimages.map(image => {
-              const date = image.metadata.find(m => m.name === 'DateTimeOriginal');
-              table.row.add([image.name, image.timestamp, date ? date.value : '']);
+              image.DateTimeOriginal = image.metadata.find(m => m.name === 'DateTimeOriginal');
+              table.row.add(image);
             });
             table.draw();
             if (data.continue) {
