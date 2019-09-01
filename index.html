@@ -46,7 +46,7 @@
         user = getUserViaPrompt();
       }
       if (user) {
-        aiuser(user);
+        aiuser(user, {}, 3);
       }
 
       function getUserFromLocation() {
@@ -60,7 +60,7 @@
         return prompt('Specify Wikimedia username!');
       }
 
-      function aiuser(user, options) {
+      function aiuser(user, options, retry) {
         const url =
           'https://commons.wikimedia.org/w/api.php?' +
           $.param(
@@ -90,7 +90,13 @@
             });
             table.draw();
             if (data.continue) {
-              return aiuser(user, data.continue);
+              return aiuser(user, data.continue, 3);
+            }
+          }).catch(err => {
+            if (retry > 0) {
+              return aiuser(user, options, retry - 1);
+            } else {
+              throw err;
             }
           });
       }
