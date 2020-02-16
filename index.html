@@ -4,50 +4,55 @@
     <meta charset="utf-8" />
     <title>aiuser – all images by user</title>
     <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/jquery/3.4.1/jquery.js"></script>
-    <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.js"></script>
     <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/datatables/1.10.19/js/jquery.dataTables.js"></script>
+    <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/datatables/1.10.19/js/dataTables.bootstrap4.js"></script>
     <link
       rel="stylesheet"
-      href="https://tools-static.wmflabs.org/cdnjs/ajax/libs/datatables/1.10.19/css/jquery.dataTables.css"
+      href="https://tools-static.wmflabs.org/cdnjs/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://tools-static.wmflabs.org/cdnjs/ajax/libs/datatables/1.10.19/css/dataTables.bootstrap4.css"
     />
   </head>
   <body>
-    <div class="container">
-      <table id="data">
+    <div class="container-fluid">
+      <table id="data" class="table table-striped table-sm">
         <thead>
           <tr>
             <th>File</th>
             <th>Upload date</th>
             <th>Original date</th>
             <th>Artist</th>
-            <th>License</th>
+            <th>🟊</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
     <script>
+      const user = getUserFromLocation() || getUserViaPrompt();
+      if (!user) {
+        throw 'No user specified!';
+      }
+
       const table = jQuery('#data').DataTable({
+        ajax: {
+          url: 'https://tools.wmflabs.org/commons-aiuser/api.php?user=' + encodeURIComponent(user),
+          dataSrc: ''
+        },
         paging: false,
         columns: [
           {
             data: null,
-            render: (data, type, row, meta) =>
-              `<a href="${data.imageinfo[0].descriptionurl}" target="_blank">${data.title}</a>`
+            render: renderFile
           },
-          {data: null, render: 'metadata.DateTime.value'},
-          {data: null, render: 'metadata.DateTimeOriginal.value'},
-          {data: null, render: 'metadata.Artist.value'},
-          {data: null, render: 'metadata.LicenseShortName.value'}
+          {data: 'DateTime', defaultContent: ''},
+          {data: 'DateTimeOriginal', defaultContent: ''},
+          {data: 'Artist', defaultContent: ''},
+          {data: 'Rating', defaultContent: ''}
         ]
       });
-      let user = getUserFromLocation();
-      if (!user) {
-        user = getUserViaPrompt();
-      }
-      if (user) {
-        aiuser(user, {}, 3);
-      }
 
       function getUserFromLocation() {
         if (!URLSearchParams) return;
@@ -57,48 +62,12 @@
       }
 
       function getUserViaPrompt() {
-        return prompt('Specify Wikimedia username!');
+        return prompt('Specify your Wikimedia username! (The input is case sensitive)');
       }
 
-      function aiuser(user, options, retry) {
-        const url =
-          'https://commons.wikimedia.org/w/api.php?' +
-          $.param(
-            $.extend(
-              {
-                action: 'query',
-                format: 'json',
-                origin: '*',
-                generator: 'allimages',
-                gaiuser: user,
-                gaisort: 'timestamp',
-                gaiprop: 'timestamp|url',
-                gailimit: 200,
-                prop: 'imageinfo',
-                iiprop: 'url|extmetadata',
-                iiextmetadatafilter: 'DateTime|DateTimeOriginal|Categories|Artist|LicenseShortName'
-              },
-              options || {}
-            )
-          );
-        return fetch(url)
-          .then(response => response.json())
-          .then(data => {
-            Object.values(data.query.pages).map(image => {
-              image.metadata = image.imageinfo[0].extmetadata;
-              table.row.add(image);
-            });
-            table.draw();
-            if (data.continue) {
-              return aiuser(user, data.continue, 3);
-            }
-          }).catch(err => {
-            if (retry > 0) {
-              return aiuser(user, options, retry - 1);
-            } else {
-              throw err;
-            }
-          });
+      function renderFile(data) {
+        const url = `https://commons.wikimedia.org/wiki/File:${data.File}`;
+        return `<a href="${url}" target="_blank" rel="external noopener">${data.File}</a>`;
       }
     </script>
   </body>
